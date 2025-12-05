@@ -83,7 +83,6 @@ typings/
 
 # Nuxt.js build / generate output
 .nuxt
-# dist - включен в репозиторий для использования в Docker без сборки
 
 # Gatsby files
 .cache/
