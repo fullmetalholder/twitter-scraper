@@ -9,10 +9,7 @@ import {
   WaitingRateLimitStrategy,
 } from './rate-limit';
 import { AuthenticationError } from './errors';
-import debug from 'debug';
 import { generateXPFFHeader } from './xpff';
-
-const log = debug('twitter-scraper:auth');
 
 export interface TwitterAuthOptions {
   fetch: typeof fetch;
@@ -284,7 +281,7 @@ export class TwitterGuestAuth implements TwitterAuth {
     try {
       await this.updateGuestTokenCore();
     } catch (err) {
-      log('Failed to update guest token; this may cause issues:', err);
+      // Token update failed, may cause issues
     }
   }
 
@@ -295,8 +292,6 @@ export class TwitterGuestAuth implements TwitterAuth {
       Authorization: `Bearer ${this.bearerToken}`,
       Cookie: await this.getCookieString(),
     });
-
-    log(`Making POST request to ${guestActivateUrl}`);
 
     const res = await this.fetch(guestActivateUrl, {
       method: 'POST',
@@ -324,8 +319,6 @@ export class TwitterGuestAuth implements TwitterAuth {
     this.guestCreatedAt = new Date();
 
     await this.setCookie('gt', newGuestToken);
-
-    log(`Updated guest token: ${newGuestToken}`);
   }
 
   /**

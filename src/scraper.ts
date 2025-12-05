@@ -15,6 +15,7 @@ import {
   fetchProfileFollowers,
   getFollowing,
   getFollowers,
+  followUser,
 } from './relationships';
 import { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';
 import { getTrends } from './trends';
@@ -47,6 +48,16 @@ import {
   findDmConversationsByUserId,
   DmConversation,
 } from './direct-messages';
+import {
+  uploadMedia,
+  createTweet,
+  retweet,
+  unretweet,
+  likeTweet,
+  unlikeTweet,
+  MediaData,
+  CreateTweetOptions,
+} from './tweet-actions';
 
 const twUrl = 'https://x.com';
 
@@ -602,6 +613,111 @@ export class Scraper {
       'Warning: Scraper#withXCsrfToken is deprecated and will be removed in a later version.',
     );
     return this;
+  }
+
+  // ==================== TWEET ACTIONS ====================
+
+  /**
+   * Send a tweet.
+   * @param text The text content of the tweet.
+   * @param replyToTweetId Optional ID of a tweet to reply to.
+   * @param mediaData Optional array of media to attach.
+   * @returns The response from Twitter.
+   */
+  public async sendTweet(
+    text: string,
+    replyToTweetId?: string,
+    mediaData?: MediaData[],
+  ): Promise<Response> {
+    const options: CreateTweetOptions = {};
+
+    if (replyToTweetId) {
+      options.replyToTweetId = replyToTweetId;
+    }
+
+    if (mediaData && mediaData.length > 0) {
+      const mediaIds: string[] = [];
+      for (const media of mediaData) {
+        const mediaId = await uploadMedia(this.auth, media);
+        mediaIds.push(mediaId);
+      }
+      options.mediaIds = mediaIds;
+    }
+
+    return createTweet(this.auth, text, options);
+  }
+
+  /**
+   * Send a quote tweet.
+   * @param text The text content of the quote tweet.
+   * @param quotedTweetId The ID of the tweet to quote.
+   * @param mediaData Optional array of media to attach.
+   * @returns The response from Twitter.
+   */
+  public async sendQuoteTweet(
+    text: string,
+    quotedTweetId: string,
+    mediaData?: MediaData[],
+  ): Promise<Response> {
+    const options: CreateTweetOptions = {
+      quoteTweetId: quotedTweetId,
+    };
+
+    if (mediaData && mediaData.length > 0) {
+      const mediaIds: string[] = [];
+      for (const media of mediaData) {
+        const mediaId = await uploadMedia(this.auth, media);
+        mediaIds.push(mediaId);
+      }
+      options.mediaIds = mediaIds;
+    }
+
+    return createTweet(this.auth, text, options);
+  }
+
+  /**
+   * Retweet a tweet.
+   * @param tweetId The ID of the tweet to retweet.
+   * @returns The response from Twitter.
+   */
+  public async retweet(tweetId: string): Promise<Response> {
+    return retweet(this.auth, tweetId);
+  }
+
+  /**
+   * Remove a retweet.
+   * @param tweetId The ID of the tweet to unretweet.
+   * @returns The response from Twitter.
+   */
+  public async unretweet(tweetId: string): Promise<Response> {
+    return unretweet(this.auth, tweetId);
+  }
+
+  /**
+   * Like a tweet.
+   * @param tweetId The ID of the tweet to like.
+   * @returns The response from Twitter.
+   */
+  public async likeTweet(tweetId: string): Promise<Response> {
+    return likeTweet(this.auth, tweetId);
+  }
+
+  /**
+   * Unlike a tweet.
+   * @param tweetId The ID of the tweet to unlike.
+   * @returns The response from Twitter.
+   */
+  public async unlikeTweet(tweetId: string): Promise<Response> {
+    return unlikeTweet(this.auth, tweetId);
+  }
+
+  /**
+   * Follow a user by username.
+   * @param username The username of the user to follow (without @).
+   * @returns The response from Twitter.
+   */
+  public async followUser(username: string): Promise<Response> {
+    return followUser(this.auth, username);
   }
 
   private getAuthOptions(): Partial<TwitterAuthOptions> {

@@ -1,7 +1,3 @@
-import debug from 'debug';
-
-const log = debug('twitter-scraper:xpff');
-
 let isoCrypto: Crypto | null = null;
 
 async function getCrypto(): Promise<Crypto> {
@@ -12,7 +8,6 @@ async function getCrypto(): Promise<Crypto> {
   // In Node.js, the global `crypto` object is only available from v19.0.0 onwards.
   // For earlier versions, we need to import the 'crypto' module.
   if (typeof crypto === 'undefined') {
-    log('Global crypto is undefined, importing from crypto module...');
     const { webcrypto } = await import('crypto');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     isoCrypto = webcrypto as any;
@@ -48,7 +43,6 @@ export class XPFFHeaderGenerator {
   }
 
   async generateHeader(plaintext: string, guestId: string): Promise<string> {
-    log(`Generating XPFF key for guest ID: ${guestId}`);
     const key = await this.deriveKey(guestId);
     const crypto = await getCrypto();
     const nonce = crypto.getRandomValues(new Uint8Array(12));
@@ -73,8 +67,6 @@ export class XPFFHeaderGenerator {
     combined.set(nonce);
     combined.set(new Uint8Array(encrypted), nonce.length);
     const result = buf2hex(combined.buffer);
-
-    log(`XPFF header generated for guest ID ${guestId}: ${result}`);
 
     return result;
   }

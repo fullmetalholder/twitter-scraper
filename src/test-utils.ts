@@ -27,9 +27,6 @@ export async function getScraper(
   let agent: any;
 
   if (options.authMethod === 'cookies' && !cookies) {
-    console.warn(
-      'TWITTER_COOKIES variable is not defined, reverting to password auth (not recommended)',
-    );
     options.authMethod = 'password';
   }
 

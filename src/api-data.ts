@@ -56,7 +56,6 @@ type EncodedVariables = string;
 type EncodedFeatures = string;
 type EncodedFieldToggles = string;
 
-// TODO: Set up field-level Intellisense for the QraphQL parameters in these?
 type BaseUrl =
   | 'https://twitter.com/i/api/graphql'
   | 'https://x.com/i/api/graphql'

@@ -8,11 +8,8 @@ import { Type, type Static } from '@sinclair/typebox';
 import { Check } from '@sinclair/typebox/value';
 import * as OTPAuth from 'otpauth';
 import { FetchParameters } from './api-types';
-import debug from 'debug';
 import { generateXPFFHeader } from './xpff';
 import { generateTransactionId } from './xctxid';
-
-const log = debug('twitter-scraper:auth-user');
 
 export interface TwitterUserAuthFlowInitRequest {
   flow_name: string;
@@ -282,6 +279,10 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     if (next.status === 'error') {
       throw next.err;
     }
+
+    // After successful login, fetch _twitter_sess via /home request
+    // Needed for full web session with read-write access
+    await this.refreshCt0Token();
   }
 
   async logout(): Promise<void> {
@@ -297,7 +298,6 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       );
     } catch (error) {
       // Ignore errors during logout but still clean up state
-      console.warn('Error during logout:', error);
     } finally {
       this.deleteToken();
       this.jar = new CookieJar();
@@ -336,11 +336,57 @@ export class TwitterUserAuth extends TwitterGuestAuth {
     headers.set('cookie', cookie);
   }
 
+  /**
+   * Refresh ct0 token and get _twitter_sess cookie by making request to /home
+   * This gets the full-length ct0 token (160 chars) and _twitter_sess required for media uploads
+   * The short 32-char token from login flow doesn't work for upload.x.com
+   * This method simulates browser behavior by making requests similar to what browser does
+   */
+  private async refreshCt0Token(): Promise<void> {
+    const headers = new Headers({
+      accept:
+        'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+      'accept-language': 'en-US,en;q=0.9',
+      'accept-encoding': 'gzip, deflate, br, zstd',
+      'cache-control': 'no-cache',
+      pragma: 'no-cache',
+      'sec-ch-ua':
+        '"Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"macOS"',
+      'sec-fetch-dest': 'document',
+      'sec-fetch-mode': 'navigate',
+      'sec-fetch-site': 'same-origin',
+      'sec-fetch-user': '?1',
+      'upgrade-insecure-requests': '1',
+      'user-agent':
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36',
+      origin: 'https://x.com',
+      referer: 'https://x.com/',
+    });
+
+    headers.set('cookie', await this.getCookieString());
+
+    try {
+      // First, try to access the home page to get updated cookies (like browser does)
+      const homeRes = await this.fetch('https://x.com/home', {
+        method: 'GET',
+        headers,
+        redirect: 'follow',
+      });
+
+      await updateCookieJar(this.jar, homeRes.headers);
+    } catch (err) {
+      // Don't throw - we can still try to use the existing token
+    }
+  }
+
   private async initLogin(): Promise<FlowTokenResult> {
     // Reset certain session-related cookies because Twitter complains sometimes if we don't
     this.removeCookie('twitter_ads_id=');
     this.removeCookie('ads_prefs=');
-    this.removeCookie('_twitter_sess=');
+    // DO NOT remove _twitter_sess - it's critical for full web session (read-write access)
+    // this.removeCookie('_twitter_sess=');
     this.removeCookie('zipbox_forms_auth_token=');
     this.removeCookie('lang=');
     this.removeCookie('bouncer_reset_cookie=');
@@ -575,7 +621,6 @@ export class TwitterUserAuth extends TwitterGuestAuth {
 
   private async handleSuccessSubtask(): Promise<FlowTokenResult> {
     // Login completed successfully, nothing more to do
-    log('Successfully logged in with user credentials.');
     return {
       status: 'success',
       response: {},
@@ -590,7 +635,6 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       onboardingTaskUrl = `https://api.x.com/1.1/onboarding/task.json?flow_name=${data.flow_name}`;
     }
 
-    log(`Making POST request to ${onboardingTaskUrl}`);
     const headers = new Headers({
       accept: '*/*',
       'accept-language': 'en-US,en;q=0.9',
@@ -652,7 +696,6 @@ export class TwitterUserAuth extends TwitterGuestAuth {
       await updateCookieJar(this.jar, res.headers);
 
       if (res.status === 429) {
-        log('Rate limit hit, waiting before retrying...');
         await this.onRateLimit({
           fetchParameters: fetchParameters,
           response: res,

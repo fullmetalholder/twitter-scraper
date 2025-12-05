@@ -242,12 +242,10 @@ export function parseLegacyTweet(
   }
 
   if (pinnedTweets.has(tweetId)) {
-    // TODO: Update tests so this can be assigned at the tweet declaration
     tw.isPin = true;
   }
 
   if (sensitiveContent) {
-    // TODO: Update tests so this can be assigned at the tweet declaration
     tw.sensitiveContent = true;
   }
 

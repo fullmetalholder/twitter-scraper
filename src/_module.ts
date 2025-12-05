@@ -45,6 +45,13 @@ export {
   WaitingRateLimitStrategy,
   ErrorRateLimitStrategy,
 } from './rate-limit';
+export {
+  getFollowing,
+  getFollowers,
+  fetchProfileFollowing,
+  fetchProfileFollowers,
+  followUser,
+} from './relationships';
 export { Scraper, type ScraperOptions } from './scraper';
 export { SearchMode } from './search';
 export type { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';
@@ -56,3 +63,14 @@ export type {
   PlaceRaw,
   Video,
 } from './tweets';
+export {
+  uploadMedia,
+  createTweet,
+  retweet,
+  unretweet,
+  likeTweet,
+  unlikeTweet,
+  type MediaData,
+  type CreateTweetOptions,
+  type MediaUploadResponse,
+} from './tweet-actions';

@@ -1,6 +1,6 @@
-import { bearerToken2, requestApi } from './api';
+import { bearerToken2, requestApi, requestApiPostForm } from './api';
 import { TwitterAuth } from './auth';
-import { Profile } from './profile';
+import { Profile, getUserIdByScreenName } from './profile';
 import { QueryProfilesResponse } from './timeline-v1';
 import { getUserTimeline } from './timeline-async';
 import {
@@ -9,6 +9,9 @@ import {
 } from './timeline-relationship';
 import { AuthenticationError } from './errors';
 import { apiRequestFactory } from './api-data';
+
+const FRIENDSHIPS_CREATE_URL =
+  'https://x.com/i/api/1.1/friendships/create.json';
 
 export function getFollowing(
   userId: string,
@@ -154,4 +157,57 @@ async function getFollowersTimeline(
   }
 
   return res.value;
+}
+
+/**
+ * Follow a user by username.
+ * Uses the same infrastructure as getTrends for consistency.
+ * @param auth Twitter authentication
+ * @param username The username of the user to follow (without @)
+ * @returns The response from Twitter
+ */
+export async function followUser(
+  auth: TwitterAuth,
+  username: string,
+): Promise<Response> {
+  if (!(await auth.isLoggedIn())) {
+    throw new AuthenticationError('Must be logged in to follow users');
+  }
+
+  const userIdResult = await getUserIdByScreenName(username, auth);
+  if (!userIdResult.success) {
+    throw new Error(`Failed to get user ID: ${userIdResult.err.message}`);
+  }
+
+  const userId = userIdResult.value;
+
+  // Minimal body with only required fields
+  const body = new URLSearchParams({
+    user_id: userId,
+    skip_status: 'true',
+    include_profile_interstitial_type: '1',
+  });
+
+  // Use requestApiPostForm similar to how getTrends uses requestApi
+  // This automatically handles auth, cookies, rate limits, and errors
+  const res = await requestApiPostForm<unknown>(
+    FRIENDSHIPS_CREATE_URL,
+    auth,
+    body,
+    undefined,
+    bearerToken2,
+  );
+
+  if (!res.success) {
+    throw res.err;
+  }
+
+  // Return Response object for compatibility with existing API
+  // The actual response data is in res.value
+  return new Response(JSON.stringify(res.value), {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
 }

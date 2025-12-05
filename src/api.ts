@@ -4,10 +4,7 @@ import { ApiError } from './errors';
 import { Platform, PlatformExtensions } from './platform';
 import { updateCookieJar } from './requests';
 import { Headers } from 'headers-polyfill';
-import debug from 'debug';
 import { generateTransactionId } from './xctxid';
-
-const log = debug('twitter-scraper:api');
 
 export interface FetchTransformOptions {
   /**
@@ -66,8 +63,6 @@ export async function requestApi<T>(
   headers: Headers = new Headers(),
   bearerTokenOverride?: string,
 ): Promise<RequestApiResult<T>> {
-  log(`Making ${method} request to ${url}`);
-
   await auth.installTo(headers, url, bearerTokenOverride);
   await platform.randomizeCiphers();
 
@@ -110,7 +105,6 @@ export async function requestApi<T>(
     await updateCookieJar(auth.cookieJar(), res.headers);
 
     if (res.status === 429) {
-      log('Rate limit hit, waiting for retry...');
       await auth.onRateLimit({
         fetchParameters: fetchParameters,
         response: res,
@@ -138,10 +132,94 @@ export async function flexParseJson<T>(res: Response): Promise<T> {
   try {
     return await res.json();
   } catch {
-    log('Failed to parse response as JSON, trying text parse...');
     const text = await res.text();
-    log('Response text:', text);
     return JSON.parse(text);
+  }
+}
+
+/**
+ * Used internally to send POST requests with form-urlencoded body to the Twitter API.
+ * Similar to requestApi but specifically for POST requests with application/x-www-form-urlencoded content type.
+ * @internal
+ * @param url - The URL to send the request to.
+ * @param auth - The instance of {@link TwitterAuth} that will be used to authorize this request.
+ * @param body - The form data as URLSearchParams to send in the request body.
+ * @param platform - The platform extensions to use.
+ * @param bearerTokenOverride - Optional bearer token to use instead of the default one.
+ */
+export async function requestApiPostForm<T>(
+  url: string,
+  auth: TwitterAuth,
+  body: URLSearchParams,
+  platform: PlatformExtensions = new Platform(),
+  bearerTokenOverride?: string,
+): Promise<RequestApiResult<T>> {
+  const headers = new Headers();
+  headers.set('Content-Type', 'application/x-www-form-urlencoded');
+
+  await auth.installTo(headers, url, bearerTokenOverride);
+  await platform.randomizeCiphers();
+
+  if (
+    auth instanceof TwitterGuestAuth &&
+    auth.options?.experimental?.xClientTransactionId
+  ) {
+    const transactionId = await generateTransactionId(
+      url,
+      auth.fetch.bind(auth),
+      'POST',
+    );
+    headers.set('x-client-transaction-id', transactionId);
+  }
+
+  let res: Response;
+  do {
+    const fetchParameters: FetchParameters = [
+      url,
+      {
+        method: 'POST',
+        headers,
+        body: body.toString(),
+        credentials: 'include',
+      },
+    ];
+
+    try {
+      res = await auth.fetch(...fetchParameters);
+    } catch (err) {
+      if (!(err instanceof Error)) {
+        throw err;
+      }
+
+      return {
+        success: false,
+        err: new Error('Failed to perform request.'),
+      };
+    }
+
+    await updateCookieJar(auth.cookieJar(), res.headers);
+
+    if (res.status === 429) {
+      await auth.onRateLimit({
+        fetchParameters: fetchParameters,
+        response: res,
+      });
+    }
+  } while (res.status === 429);
+
+  if (!res.ok) {
+    return {
+      success: false,
+      err: await ApiError.fromResponse(res),
+    };
+  }
+
+  const value: T = await flexParseJson(res);
+  if (res.headers.get('x-rate-limit-incoming') == '0') {
+    auth.deleteToken();
+    return { success: true, value };
+  } else {
+    return { success: true, value };
   }
 }
 

@@ -1,8 +1,5 @@
 import initCycleTLS from 'cycletls';
 import { Headers } from 'headers-polyfill';
-import debug from 'debug';
-
-const log = debug('twitter-scraper:cycletls');
 
 let cycleTLSInstance: Awaited<ReturnType<typeof initCycleTLS>> | null = null;
 
@@ -11,9 +8,7 @@ let cycleTLSInstance: Awaited<ReturnType<typeof initCycleTLS>> | null = null;
  */
 export async function initCycleTLSFetch() {
   if (!cycleTLSInstance) {
-    log('Initializing CycleTLS...');
     cycleTLSInstance = await initCycleTLS();
-    log('CycleTLS initialized successfully');
   }
   return cycleTLSInstance;
 }
@@ -23,7 +18,6 @@ export async function initCycleTLSFetch() {
  */
 export function cycleTLSExit() {
   if (cycleTLSInstance) {
-    log('Exiting CycleTLS...');
     cycleTLSInstance.exit();
     cycleTLSInstance = null;
   }
@@ -46,8 +40,6 @@ export async function cycleTLSFetch(
       ? input.toString()
       : input.url;
   const method = (init?.method || 'GET').toUpperCase();
-
-  log(`Making ${method} request to ${url}`);
 
   // Extract headers from RequestInit
   const headers: Record<string, string> = {};
@@ -135,7 +127,6 @@ export async function cycleTLSFetch(
 
     return fetchResponse;
   } catch (error) {
-    log(`CycleTLS request failed: ${error}`);
     throw error;
   }
 }

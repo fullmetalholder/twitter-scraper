@@ -1,7 +1,4 @@
 import fetch from 'cross-fetch';
-import debug from 'debug';
-
-const log = debug('twitter-scraper:xctxid');
 
 // @ts-expect-error import type annotation ("the current file is a CommonJS module")
 type LinkeDOM = typeof import('linkedom');
@@ -165,12 +162,10 @@ export async function generateTransactionId(
   const parsedUrl = new URL(url);
   const path = parsedUrl.pathname;
 
-  log(`Generating transaction ID for ${method} ${path}`);
   const document = await handleXMigration(fetchFn);
   const ClientTransactionClass = await clientTransaction();
   const transaction = await ClientTransactionClass.create(document);
   const transactionId = await transaction.generateTransactionId(method, path);
-  log(`Transaction ID: ${transactionId}`);
 
   return transactionId;
 }

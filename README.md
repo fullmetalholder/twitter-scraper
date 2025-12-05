@@ -45,6 +45,43 @@ iterators have been translated into
 instances, and can be consumed with the corresponding
 `for await (const x of y) { ... }` syntax.
 
+### Quick Start Examples
+
+#### Getting User Following and Followers
+
+```ts
+import { Scraper } from '@the-convocation/twitter-scraper';
+
+const scraper = new Scraper();
+
+// Login is required for following/followers endpoints
+await scraper.login('username', 'password', 'email@example.com');
+
+// Get user profile to obtain userId
+const profile = await scraper.getProfile('elonmusk');
+const userId = profile.userId!;
+
+// Get users that someone follows (following)
+const following = scraper.getFollowing(userId, 50);
+for await (const user of following) {
+  console.log(`@${user.username} - ${user.name}`);
+}
+
+// Get someone's followers
+const followers = scraper.getFollowers(userId, 50);
+for await (const user of followers) {
+  console.log(`@${user.username} - ${user.name}`);
+}
+
+// Using pagination for more control
+let cursor: string | undefined;
+const response = await scraper.fetchProfileFollowing(userId, 20, cursor);
+console.log(response.profiles);  // Array of profiles
+cursor = response.next;          // Next page cursor
+```
+
+See [USAGE_GUIDE.md](./USAGE_GUIDE.md) for comprehensive examples and [CHEATSHEET.md](./CHEATSHEET.md) for quick API reference.
+
 ### Browser usage
 
 This package directly invokes the Twitter API, which does not have permissive
@@ -282,3 +319,42 @@ PROXY_URL=           # HTTP(s) proxy for requests (optional)
 We use [Conventional Commits](https://www.conventionalcommits.org), and enforce
 this with precommit checks. Please refer to the Git history for real examples of
 the commit message format.
+
+## API Reference
+
+### Following & Followers
+
+- `scraper.getFollowing(userId, maxProfiles)` - Get users that someone follows
+- `scraper.getFollowers(userId, maxProfiles)` - Get someone's followers  
+- `scraper.fetchProfileFollowing(userId, maxProfiles, cursor?)` - Paginated following
+- `scraper.fetchProfileFollowers(userId, maxProfiles, cursor?)` - Paginated followers
+
+### Tweets
+
+- `scraper.getTweets(username, maxTweets)` - Get user tweets
+- `scraper.getTweetsByUserId(userId, maxTweets)` - Get tweets by user ID
+- `scraper.getTweetsAndReplies(username, maxTweets)` - Get tweets and replies
+- `scraper.getTweet(tweetId)` - Get single tweet
+- `scraper.getLikedTweets(username, maxTweets)` - Get liked tweets (login required)
+
+### Tweet Actions
+
+- `scraper.sendTweet(text, replyToTweetId?, mediaData?)` - Send tweet
+- `scraper.sendQuoteTweet(text, quotedTweetId, mediaData?)` - Quote tweet
+- `scraper.retweet(tweetId)` / `scraper.unretweet(tweetId)` - Retweet actions
+- `scraper.likeTweet(tweetId)` / `scraper.unlikeTweet(tweetId)` - Like actions
+
+### Search
+
+- `scraper.searchTweets(query, maxTweets, searchMode)` - Search tweets
+- `scraper.searchProfiles(query, maxProfiles)` - Search profiles
+
+### User Profiles
+
+- `scraper.getProfile(username)` - Get user profile
+- `scraper.getProfileByUserId(userId)` - Get profile by ID
+
+For complete documentation, see:
+- [Usage Guide](./USAGE_GUIDE.md) - Detailed examples and patterns
+- [Cheat Sheet](./CHEATSHEET.md) - Quick API reference
+- [API Docs](https://the-convocation.github.io/twitter-scraper/) - Full TypeScript documentation

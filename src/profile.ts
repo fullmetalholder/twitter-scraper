@@ -22,7 +22,6 @@ export interface LegacyUserRaw {
       }[];
     };
     description?: {
-      // TODO: Get the proper type of this.
       urls?: any[];
     };
   };
@@ -48,11 +47,8 @@ export interface LegacyUserRaw {
   url?: string;
   can_dm?: boolean;
   id?: number;
-  // TODO: Get the proper type of this.
   utc_offset?: any;
-  // TODO: Get the proper type of this.
   time_zone?: any;
-  // TODO: Get the proper type of this.
   lang?: any;
   contributors_enabled?: boolean;
   is_translator?: boolean;
@@ -81,7 +77,6 @@ export interface LegacyUserRaw {
   dm_blocking?: boolean;
   business_profile_state?: string;
   translator_type?: string;
-  // TODO: Get the proper type of this.
   withheld_in_countries?: any[];
   followed_by?: boolean;
 }

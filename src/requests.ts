@@ -1,9 +1,6 @@
 import { Cookie, CookieJar } from 'tough-cookie';
 import setCookie from 'set-cookie-parser';
 import type { Headers as HeadersPolyfill } from 'headers-polyfill';
-import debug from 'debug';
-
-const log = debug('twitter-scraper:requests');
 
 /**
  * Updates a cookie jar with the Set-Cookie headers from the provided Headers instance.
@@ -32,7 +29,6 @@ export async function updateCookieJar(
     for (const cookieStr of setCookieHeaders) {
       const cookie = Cookie.parse(cookieStr);
       if (!cookie) {
-        log(`Failed to parse cookie: ${cookieStr.substring(0, 100)}`);
         continue;
       }
 
@@ -42,9 +38,6 @@ export async function updateCookieJar(
         cookie.maxAge === 0 ||
         (cookie.expires && cookie.expires < new Date())
       ) {
-        if (cookie.key === 'ct0') {
-          log(`Skipping deletion of ct0 cookie (Max-Age=0)`);
-        }
         continue;
       }
 
@@ -53,20 +46,8 @@ export async function updateCookieJar(
           cookie.path
         }`;
         await cookieJar.setCookie(cookie, url);
-        if (cookie.key === 'ct0') {
-          log(
-            `Successfully set ct0 cookie with value: ${cookie.value.substring(
-              0,
-              20,
-            )}...`,
-          );
-        }
       } catch (err) {
-        // Log cookie setting errors
-        log(`Failed to set cookie ${cookie.key}: ${err}`);
-        if (cookie.key === 'ct0') {
-          log(`FAILED to set ct0 cookie! Error: ${err}`);
-        }
+        // Cookie setting errors are silently ignored
       }
     }
   } else if (typeof document !== 'undefined') {

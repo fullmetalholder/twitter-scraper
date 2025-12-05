@@ -94,7 +94,6 @@ export interface DmReaction {
 }
 
 export interface DmMessageEntities {
-  // TODO: Not sure what these types are.
   hashtags: any[];
   symbols: any[];
   user_mentions: any[];
@@ -135,7 +134,6 @@ export async function fetchDmInbox(auth: TwitterAuth) {
     );
   }
 
-  // TODO: Not sure how the "cursor" works for this. I don't have enough DMs to test.
   const params = new URLSearchParams();
   addApiParams(params, false);
 
